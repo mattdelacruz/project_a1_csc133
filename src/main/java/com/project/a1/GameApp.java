@@ -59,25 +59,32 @@ class GameText extends GameObject {
     private static final Scale SCALE = new Scale(1, -1);
     private static final FontWeight FONT_WEIGHT = FontWeight.NORMAL;
     private static final int FONT_SIZE = 15;
-    Label l = new Label();
 
-    GameText(String s, Color c) {
-        getTransforms().add(SCALE);
+    Label l = new Label();
+    Color color;
+    Point2D loc;
+
+    GameText(String s, Point2D pos, Color c) {
+        color = c;
+        loc = pos;
         generateLabel(s, c);
     }
 
     private void generateLabel(String s, Color c) {
-        Label l = new Label(s);
+        l = new Label(s);
         l.setFont(Font.font("Arial", FONT_WEIGHT, FONT_SIZE));
         l.setTextFill(c);
-        SCALE.setPivotY(l.getHeight() / 2);
+        getTransforms().add(new Translate(loc.getX(), loc.getY()));
         getTransforms().add(SCALE);
         getChildren().add(l);
-
     }
 
-    public Label getLabel() {
-        return l;
+    public void updateLabel(String s) {
+        getChildren().remove(l);
+        l = new Label(s);
+        l.setFont(Font.font("Arial", FONT_WEIGHT, FONT_SIZE));
+        l.setTextFill(color);
+        getChildren().add(l);
     }
 }
 
@@ -111,10 +118,12 @@ class Helicopter extends GameObject {
 
     private static final int ROTATION_ANGLE = 15;
     private static final int HEADING_LENGTH = 50;
+    private static final int START_FUEL = 250000;
+    private static final int FUEL_CONSUMPTION = -1;
 
-    Circle circle = new Circle();
-    Line line = new Line();
-    GameText fuel = new GameText("", null);
+    Circle circle;
+    Line line;
+    GameText fuel;
     boolean engineStart = false;
     double speed = 0;
 
@@ -124,14 +133,28 @@ class Helicopter extends GameObject {
                 circle.getCenterY(),
                 circle.getCenterX(),
                 circle.getCenterY() + circle.getRadius() + HEADING_LENGTH);
-        fuel = new GameText("hello", c);
-        fuel.getTransforms().add(new Translate(s.getX(), s.getY() - 50));
+        fuel = new GameText(Integer.toString(START_FUEL), new Point2D(
+                circle.getCenterX() -
+                        circle.getRadius(),
+                circle.getCenterY() -
+                        circle.getRadius() * 3),
+                c);
         line.setStroke(c);
-        this.getChildren().addAll(circle, line, fuel.getLabel());
+        getChildren().addAll(circle, line, fuel);
+    }
+
+    public void consumeFuel() {
+        updateFuel(FUEL_CONSUMPTION);
+    }
+
+    public void updateFuel(int f) {
+        fuel.updateLabel(Integer.toString(f));
+        getChildren().remove(fuel);
+        getChildren().add(fuel);
     }
 
     public void Left() {
-        this.getTransforms()
+        getTransforms()
                 .add(new Rotate(
                         ROTATION_ANGLE,
                         circle.getBoundsInLocal().getCenterX(),
@@ -139,23 +162,16 @@ class Helicopter extends GameObject {
     }
 
     public void Right() {
-        this.getTransforms()
+        getTransforms()
                 .add(new Rotate(
                         -ROTATION_ANGLE,
                         circle.getBoundsInLocal().getCenterX(),
                         circle.getBoundsInLocal().getCenterY()));
     }
 
-    public void increaseSpeed() {
-        if (engineStart) {
-            speed += 0.1;
-        } else
-            return;
-    }
-
     public void moveHeli() {
         if (engineStart)
-            this.getTransforms().add(new Translate(0, speed));
+            getTransforms().add(new Translate(0, speed));
         else
             return;
     }
@@ -165,6 +181,13 @@ class Helicopter extends GameObject {
             engineStart = true;
         else
             engineStart = false;
+    }
+
+    public void increaseSpeed() {
+        if (engineStart) {
+            speed += 0.1;
+        } else
+            return;
     }
 
     public void decreaseSpeed() {
@@ -231,9 +254,13 @@ class Game extends Pane {
     public void startAnimation() {
         AnimationTimer loop = new AnimationTimer() {
 
+            int i = 0;
+
             @Override
             public void handle(long now) {
                 heli.moveHeli();
+                heli.updateFuel(i);
+                i++;
             }
         };
         loop.start();
