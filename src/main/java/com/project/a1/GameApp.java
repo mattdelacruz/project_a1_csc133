@@ -68,10 +68,11 @@ class GameText extends GameObject {
 
     private void generateLabel(String s, Color c) {
         Label l = new Label(s);
-        l.setTextFill(c);
         l.setFont(Font.font("Arial", FONT_WEIGHT, FONT_SIZE));
+        l.setTextFill(c);
         SCALE.setPivotY(l.getHeight() / 2);
-        l.getTransforms().add(SCALE);
+        getTransforms().add(SCALE);
+        getChildren().add(l);
 
     }
 
@@ -88,7 +89,7 @@ class Helipad extends GameObject {
     Circle circle = new Circle();
 
     Helipad(Point2D s, Color c, int w, int h) {
-        rect = new Rectangle(s.getX(), s.getY(), 100, 100);
+        rect = new Rectangle(s.getX(), s.getY(), w, h);
         circle = new Circle(rect.getX() + rect.getWidth() / 2,
                 rect.getY() + rect.getHeight() / 2,
                 (rect.getWidth() / 2) - GAP);
@@ -183,11 +184,10 @@ class Game extends Pane {
     public static final int GAME_WIDTH = 400;
     public static final int GAME_HEIGHT = 800;
 
-    public static final int HELI_RADIUS = GAME_WIDTH / 25;
+    public static final int HELI_RADIUS = GAME_WIDTH / 30;
     public static final Color HELI_COLOR = Color.YELLOW;
 
-    private static final int HELIPAD_WIDTH = GAME_WIDTH / 5;
-    private static final int HELIPAD_HEIGHT = GAME_HEIGHT / 5;
+    private static final int HELIPAD_SIZE = GAME_WIDTH / 5;
     public static final Color HELIPAD_COLOR = Color.GRAY;
 
     private static final Scale SCALE = new Scale(1, -1);
@@ -201,11 +201,11 @@ class Game extends Pane {
         SCALE.setPivotY(GAME_HEIGHT / 2);
 
         helipad = new Helipad(new Point2D(
-                GAME_WIDTH / 2 - HELIPAD_WIDTH / 2,
+                GAME_WIDTH / 2 - HELIPAD_SIZE / 2,
                 GAME_HEIGHT / 10),
                 HELIPAD_COLOR,
-                HELIPAD_WIDTH,
-                HELIPAD_HEIGHT);
+                HELIPAD_SIZE,
+                HELIPAD_SIZE);
 
         heli = new Helicopter(new Point2D(
                 helipad.getCenter().getX(),
