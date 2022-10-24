@@ -55,7 +55,7 @@ interface Update {
 class GameText extends GameObject {
     private static final Scale SCALE = new Scale(1, -1);
     private static final FontWeight FONT_WEIGHT = FontWeight.NORMAL;
-    private static final int FONT_SIZE = 15;
+    public static final int FONT_SIZE = 15;
 
     Label l = new Label();
     Color color;
@@ -74,6 +74,10 @@ class GameText extends GameObject {
         getTransforms().add(new Translate(loc.getX(), loc.getY()));
         getTransforms().add(SCALE);
         getChildren().add(l);
+    }
+
+    public void moveLabel(Point2D pos) {
+        getTransforms().add(new Translate(pos.getX(), pos.getY()));
     }
 
     public void updateLabel(String s) {
@@ -97,8 +101,8 @@ class Pond extends GameObject {
         circle.setFill(POND_COLOR);
         pondLabel = new GameText(Double.toString(size),
                 new Point2D(
-                        circle.getCenterX(),
-                        circle.getCenterY()),
+                        circle.getBoundsInLocal().getMinX() + size - GameText.FONT_SIZE,
+                        circle.getBoundsInLocal().getMinY() + size),
                 Color.WHITE);
         getChildren().addAll(circle, pondLabel);
 
@@ -167,6 +171,8 @@ class Helicopter extends GameObject {
         updateFuel(fuelValue += FUEL_CONSUMPTION);
     }
 
+    public boolean isIgnitionOn() { return engineStart;}
+
     private void updateFuel(int f) {
         fuelLabel.updateLabel(Integer.toString(f));
         getChildren().remove(fuelLabel);
@@ -227,12 +233,14 @@ class Game extends Pane {
     public static final int GAME_WIDTH = 400;
     public static final int GAME_HEIGHT = 800;
 
-    public static final int HELI_RADIUS = GAME_WIDTH / 30;
-    public static final Color HELI_COLOR = Color.YELLOW;
+    private static final int HELI_RADIUS = GAME_WIDTH / 30;
+    private static final Color HELI_COLOR = Color.YELLOW;
     private static final int START_FUEL = 250000;
 
+    private static final int POND_SIZE = GAME_WIDTH / 10;
+
     private static final int HELIPAD_SIZE = GAME_WIDTH / 5;
-    public static final Color HELIPAD_COLOR = Color.GRAY;
+    private static final Color HELIPAD_COLOR = Color.GRAY;
 
     private static final Scale SCALE = new Scale(1, -1);
 
@@ -241,34 +249,10 @@ class Game extends Pane {
     Helipad helipad;
     Pond pond;
 
-    Game() {
-        SCALE.setPivotY(GAME_HEIGHT / 2);
-
-        helipad = new Helipad(new Point2D(
-                GAME_WIDTH / 2 - HELIPAD_SIZE / 2,
-                GAME_HEIGHT / 10),
-                HELIPAD_COLOR,
-                HELIPAD_SIZE,
-                HELIPAD_SIZE);
-
-        heli = new Helicopter(new Point2D(
-                helipad.getCenter().getX(),
-                helipad.getCenter().getY()),
-                HELI_COLOR,
-                HELI_RADIUS,
-                START_FUEL);
-        // rand.nextInt((max - min) + 1) + min;
-
-        Point2D pondLoc = new Point2D(r.nextInt(GAME_WIDTH),
-                r.nextInt((GAME_HEIGHT - 2 * GAME_HEIGHT / 3) + 1) + 2 * GAME_HEIGHT / 3);
-        pond = new Pond(pondLoc, 50);
-
-        setStyle("-fx-background-color: black;");
-        getTransforms().add(SCALE);
-        getChildren().addAll(helipad, heli, pond);
-
+    public Game() {
+        createGameObjects();
+        setUpPane();
         startAnimation();
-
     }
 
     public void startAnimation() {
@@ -277,10 +261,54 @@ class Game extends Pane {
             @Override
             public void handle(long now) {
                 heli.moveHeli();
-                heli.consumeFuel();
+                if (heli.isIgnitionOn())
+                    heli.consumeFuel();
             }
         };
         loop.start();
+    }
+
+    public void createGameObjects() {
+        createHelipad();
+        createHelicopter();
+        createPond();
+    }
+
+    public void setUpPane() {
+        SCALE.setPivotY(GAME_HEIGHT / 2);
+        setStyle("-fx-background-color: black;");
+        getTransforms().add(SCALE);
+        getChildren().addAll(helipad, pond, heli);
+    }
+
+    public void createHelipad() {
+        helipad = new Helipad(new Point2D(
+                GAME_WIDTH / 2 - HELIPAD_SIZE / 2,
+                GAME_HEIGHT / 10),
+                HELIPAD_COLOR,
+                HELIPAD_SIZE,
+                HELIPAD_SIZE);
+    }
+
+    public void createHelicopter() {
+        heli = new Helicopter(new Point2D(
+                helipad.getCenter().getX(),
+                helipad.getCenter().getY()),
+                HELI_COLOR,
+                HELI_RADIUS,
+                START_FUEL);
+    }
+
+    public void createPond() {
+        // rand.nextInt((max - min) + 1) + min;
+
+        Point2D pondLoc = new Point2D(r.nextInt((GAME_WIDTH - 
+                POND_SIZE * 2) + 1) +
+                POND_SIZE * 2, 
+                r.nextInt((GAME_HEIGHT - 
+                2 * GAME_HEIGHT / 3) + 1) +
+                2 * GAME_HEIGHT / 3);
+        pond = new Pond(pondLoc, POND_SIZE);
     }
 
     public void handleMovement(KeyEvent e) {
@@ -308,10 +336,15 @@ class Game extends Pane {
     public void handleBoundBoxes() {
         heli.showBoundingBox();
         helipad.showBoundingBox();
+        pond.showBoundingBox();
     }
 
     public void handleReset() {
-
+        getChildren().clear();
+        getTransforms().clear();
+        createGameObjects();
+        
+        setUpPane();
     }
 
 }
