@@ -25,23 +25,24 @@ import java.util.Random;
 
 abstract class GameObject extends Group {
     boolean isBoundOn = false;
-    Rectangle bound = new Rectangle(getBoundsInLocal().getMinX(),
-            getBoundsInLocal().getMinY(),
-            getBoundsInLocal().getWidth(),
-            getBoundsInLocal().getHeight());
+    Rectangle bound;
 
     void showBoundingBox() {
+        bound = new Rectangle(getBoundsInLocal().getMinX(),
+                getBoundsInLocal().getMinY(),
+                getBoundsInLocal().getWidth(),
+                getBoundsInLocal().getHeight());
+
         bound.setFill(Color.TRANSPARENT);
         bound.setStroke(Color.WHITE);
 
         if (!isBoundOn) {
-            isBoundOn = true;
             getChildren().add(bound);
+            isBoundOn = true;
 
         } else if (isBoundOn) {
-            isBoundOn = false;
-            bound.setStroke(Color.TRANSPARENT);
             getChildren().remove(bound);
+            isBoundOn = false;
         }
     }
 }
