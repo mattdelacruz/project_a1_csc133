@@ -226,7 +226,6 @@ class Helicopter extends GameObject {
     public double getSpeed() {
         return speed;
     }
-
 }
 
 class Game extends Pane {
@@ -251,7 +250,7 @@ class Game extends Pane {
 
     public Game() {
         createGameObjects();
-        setUpPane();
+        setUpUI();
         startAnimation();
     }
 
@@ -263,6 +262,10 @@ class Game extends Pane {
                 heli.moveHeli();
                 if (heli.isIgnitionOn())
                     heli.consumeFuel();
+                if (heli.getBoundsInParent().intersects(pond.getBoundsInParent())){
+                    System.out.println("helloo");
+                }
+                
             }
         };
         loop.start();
@@ -274,7 +277,7 @@ class Game extends Pane {
         createPond();
     }
 
-    public void setUpPane() {
+    public void setUpUI() {
         SCALE.setPivotY(GAME_HEIGHT / 2);
         setStyle("-fx-background-color: black;");
         getTransforms().add(SCALE);
@@ -343,8 +346,7 @@ class Game extends Pane {
         getChildren().clear();
         getTransforms().clear();
         createGameObjects();
-        
-        setUpPane();
+        setUpUI();
     }
 
 }
