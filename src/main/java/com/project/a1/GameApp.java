@@ -25,13 +25,17 @@ import java.util.Random;
 
 abstract class GameObject extends Group {
     boolean isBoundOn = false;
-    Rectangle bound;
+    Rectangle bound = new Rectangle(getBoundsInParent().getMinX(),
+            getBoundsInParent().getMinY(),
+            getBoundsInParent().getWidth(),
+            getBoundsInParent().getHeight());
 
     void showBoundingBox() {
-        bound = new Rectangle(getBoundsInLocal().getMinX(),
-                getBoundsInLocal().getMinY(),
-                getBoundsInLocal().getWidth(),
-                getBoundsInLocal().getHeight());
+        getChildren().remove(bound);
+        bound = new Rectangle(getBoundsInParent().getMinX(),
+                getBoundsInParent().getMinY(),
+                getBoundsInParent().getWidth(),
+                getBoundsInParent().getHeight());
 
         bound.setFill(Color.TRANSPARENT);
         bound.setStroke(Color.WHITE);
@@ -41,9 +45,20 @@ abstract class GameObject extends Group {
             isBoundOn = true;
 
         } else if (isBoundOn) {
-            getChildren().remove(bound);
             isBoundOn = false;
         }
+    }
+
+    void updateBoundingBox() {
+        getChildren().remove(bound);
+        bound = new Rectangle(getBoundsInParent().getMinX(),
+                getBoundsInParent().getMinY(),
+                getBoundsInParent().getWidth(),
+                getBoundsInParent().getHeight());
+        bound.setFill(Color.TRANSPARENT);
+        bound.setStroke(Color.WHITE);
+        getChildren().add(bound);
+
     }
 }
 
@@ -64,6 +79,8 @@ class GameText extends GameObject {
     GameText(String s, Point2D pos, Color c) {
         color = c;
         loc = pos;
+        getTransforms().addAll(new Translate(loc.getX(), 
+            loc.getY()), SCALE);
         generateLabel(s, c);
     }
 
@@ -71,21 +88,18 @@ class GameText extends GameObject {
         l = new Label(s);
         l.setFont(Font.font("Arial", FONT_WEIGHT, FONT_SIZE));
         l.setTextFill(c);
-        getTransforms().add(new Translate(loc.getX(), loc.getY()));
-        getTransforms().add(SCALE);
+
         getChildren().add(l);
     }
 
     public void moveLabel(Point2D pos) {
         getTransforms().add(new Translate(pos.getX(), pos.getY()));
+
     }
 
     public void updateLabel(String s) {
         getChildren().remove(l);
-        l = new Label(s);
-        l.setFont(Font.font("Arial", FONT_WEIGHT, FONT_SIZE));
-        l.setTextFill(color);
-        getChildren().add(l);
+        generateLabel(s, color);
     }
 }
 
@@ -99,10 +113,10 @@ class Pond extends GameObject {
     Pond(Point2D s, double size) {
         circle = new Circle(s.getX(), s.getY(), size);
         circle.setFill(POND_COLOR);
-        pondLabel = new GameText(Double.toString(size),
+        pondLabel = new GameText(String.format("%f", size),
                 new Point2D(
-                        circle.getBoundsInLocal().getMinX() + size - GameText.FONT_SIZE,
-                        circle.getBoundsInLocal().getMinY() + size),
+                        circle.getBoundsInParent().getMinX() + size - GameText.FONT_SIZE,
+                        circle.getBoundsInParent().getMinY() + size),
                 Color.WHITE);
         getChildren().addAll(circle, pondLabel);
 
@@ -126,7 +140,7 @@ class Helipad extends GameObject {
         rect.setStroke(c);
         circle.setFill(Color.TRANSPARENT);
         circle.setStroke(c);
-        this.getChildren().addAll(rect, circle);
+        getChildren().addAll(rect, circle);
 
     }
 
@@ -138,66 +152,78 @@ class Helipad extends GameObject {
 class Helicopter extends GameObject {
 
     private static final int ROTATION_ANGLE = 15;
-    private static final int HEADING_LENGTH = 50;
-    private static final int FUEL_CONSUMPTION = -1;
+    private static final int HEADING_LENGTH = 30;
+    private static final int FUEL_CONSUMPTION = 1000;
     private static final int MAX_SPEED = 10;
     private static final int MIN_SPEED = -2;
 
     Circle circle;
     Line line;
     GameText fuelLabel;
+    Group helicopter, label;
     boolean engineStart = false;
     double speed = 0;
     int fuelValue = 0;
 
     Helicopter(Point2D s, Color c, double r, int startFuel) {
+        helicopter = new Group();
+        label = new Group();
         circle = new Circle(s.getX(), s.getY(), r, c);
         line = new Line(circle.getCenterX(),
                 circle.getCenterY(),
                 circle.getCenterX(),
                 circle.getCenterY() + circle.getRadius() + HEADING_LENGTH);
-        fuelLabel = new GameText(Integer.toString(startFuel), new Point2D(
-                circle.getCenterX() -
-                        circle.getRadius(),
-                circle.getCenterY() -
-                        circle.getRadius() * 3),
-                c);
+        
+        helicopter.getChildren().addAll(circle, line);
         fuelValue = startFuel;
+        fuelLabel = new GameText(String.format("F: %d",fuelValue), 
+                new Point2D(
+                helicopter.getBoundsInParent().getMinX() -
+                        10,
+                helicopter.getBoundsInParent().getMinY() -
+                        15),
+                c);
         line.setStroke(c);
-        getChildren().addAll(circle, line, fuelLabel);
+        label.getChildren().addAll(fuelLabel);
+        getChildren().addAll(helicopter, label);
     }
 
-    public void consumeFuel() {
-        updateFuel(fuelValue += FUEL_CONSUMPTION);
+    public void consumeFuel() { 
+        if (fuelValue > 0)
+            updateFuel(fuelValue -= FUEL_CONSUMPTION); 
+        
     }
 
-    public boolean isIgnitionOn() { return engineStart;}
+    public boolean isIgnitionOn() { return engineStart; }
 
     private void updateFuel(int f) {
-        fuelLabel.updateLabel(Integer.toString(f));
-        getChildren().remove(fuelLabel);
-        getChildren().add(fuelLabel);
+        fuelLabel.updateLabel(String.format("F: %d", f));
+        label.getChildren().remove(fuelLabel);
+        label.getChildren().add(fuelLabel);
     }
 
     public void Left() {
-        getTransforms()
+        helicopter.getTransforms()
                 .add(new Rotate(
                         ROTATION_ANGLE,
-                        circle.getBoundsInLocal().getCenterX(),
-                        circle.getBoundsInLocal().getCenterY()));
+                        circle.getBoundsInParent().getCenterX(),
+                        circle.getBoundsInParent().getCenterY()));
     }
 
     public void Right() {
-        getTransforms()
+        helicopter.getTransforms()
                 .add(new Rotate(
                         -ROTATION_ANGLE,
-                        circle.getBoundsInLocal().getCenterX(),
-                        circle.getBoundsInLocal().getCenterY()));
+                        circle.getBoundsInParent().getCenterX(),
+                        circle.getBoundsInParent().getCenterY()));
     }
 
     public void moveHeli() {
-        if (engineStart)
-            getTransforms().add(new Translate(0, speed));
+        if (engineStart) {
+            helicopter.getTransforms().add(new Translate(0, speed));
+            label.setTranslateX(helicopter.getBoundsInParent().getMinX());
+            label.setTranslateY(helicopter.getBoundsInParent().getMinY());
+        }
         else
             return;
     }
@@ -256,16 +282,20 @@ class Game extends Pane {
 
     public void startAnimation() {
         AnimationTimer loop = new AnimationTimer() {
+            int i = 0;
 
             @Override
             public void handle(long now) {
                 heli.moveHeli();
-                if (heli.isIgnitionOn())
+                if (heli.isIgnitionOn()) {
                     heli.consumeFuel();
-                if (heli.getBoundsInParent().intersects(pond.getBoundsInParent())){
-                    System.out.println("helloo");
                 }
-                
+                if (heli.getBoundsInParent().
+                    intersects(pond.getBoundsInParent())) {
+                        i++;
+                        System.out.println("I am over the pond " + i + " times");
+                }
+                heli.updateBoundingBox();
             }
         };
         loop.start();
@@ -286,32 +316,32 @@ class Game extends Pane {
 
     public void createHelipad() {
         helipad = new Helipad(new Point2D(
-                GAME_WIDTH / 2 - HELIPAD_SIZE / 2,
-                GAME_HEIGHT / 10),
-                HELIPAD_COLOR,
-                HELIPAD_SIZE,
-                HELIPAD_SIZE);
+            GAME_WIDTH / 2 - HELIPAD_SIZE / 2,
+            GAME_HEIGHT / 10),
+            HELIPAD_COLOR,
+            HELIPAD_SIZE,
+            HELIPAD_SIZE);
     }
 
     public void createHelicopter() {
         heli = new Helicopter(new Point2D(
-                helipad.getCenter().getX(),
-                helipad.getCenter().getY()),
-                HELI_COLOR,
-                HELI_RADIUS,
-                START_FUEL);
+            helipad.getCenter().getX(),
+            helipad.getCenter().getY()),
+            HELI_COLOR,
+            HELI_RADIUS,
+            START_FUEL);
     }
 
     public void createPond() {
         // rand.nextInt((max - min) + 1) + min;
-
-        Point2D pondLoc = new Point2D(r.nextInt((GAME_WIDTH - 
-                POND_SIZE * 2) + 1) +
-                POND_SIZE * 2, 
-                r.nextInt((GAME_HEIGHT - 
-                2 * GAME_HEIGHT / 3) + 1) +
-                2 * GAME_HEIGHT / 3);
-        pond = new Pond(pondLoc, POND_SIZE);
+        pond = new Pond(new Point2D(
+            r.nextInt(((GAME_WIDTH - POND_SIZE) - 
+            POND_SIZE) + 1) +
+            POND_SIZE, 
+            r.nextInt(((GAME_HEIGHT - POND_SIZE) - 
+            (int)helipad.getBoundsInParent().getMaxY()) + 1) +
+            (int)helipad.getBoundsInParent().getMaxY()),
+            POND_SIZE);
     }
 
     public void handleMovement(KeyEvent e) {
@@ -386,5 +416,4 @@ public class GameApp extends Application {
     public static void main(String[] args) {
         launch();
     }
-
 }
