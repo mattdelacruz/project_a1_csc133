@@ -118,51 +118,58 @@ class Pond extends GameObject {
     Pond(Point2D s, double size) {
         circle = new Circle(s.getX(), s.getY(), size);
         circle.setFill(POND_COLOR);
-        pondLabel = new GameText(String.format("%.2f", size),
+        pondLabel = new GameText(String.format("%.0f%%", size),
                 new Point2D(
-                        circle.getBoundsInParent().getMinX() + size - GameText.FONT_SIZE,
-                        circle.getBoundsInParent().getMinY() + size),
+                        circle.getBoundsInParent().getCenterX() - (GameText.FONT_SIZE / 2),
+                        circle.getBoundsInParent().getCenterY() + (GameText.FONT_SIZE / 2)),
                 Color.WHITE);
         getChildren().addAll(circle, pondLabel);
     }
 }
 class Cloud extends GameObject {
 
-    public static final int MAX_COLOR_VALUE = 255;
+    private static final double MAX_COLOR_VALUE = 255;
+    private static final double MIN_COLOR_VALUE = 155;
+    private static final double PERCENT_VALUE = 0.01;
+    private static final double PERCENT_ADDER = (MAX_COLOR_VALUE -
+            MIN_COLOR_VALUE) * PERCENT_VALUE;
 
     Circle circle;
     GameText cloudLabel;
-    int cloudColor;
-    double percentage;
+    double percentage, cloudColor;
 
     Cloud(Point2D s, double size) {
         circle = new Circle(s.getX(), s.getY(), size);
-        cloudColor = 255;
+        cloudColor = 0;
         percentage = cloudColor / MAX_COLOR_VALUE;
         percentage *= 100;
-        circle.setFill(Color.rgb(cloudColor, cloudColor, cloudColor));
-        cloudLabel = new GameText(String.format("%.2f ", percentage),
-                new Point2D(
-                        circle.getBoundsInParent().getMinX() + size - GameText.FONT_SIZE,
-                        circle.getBoundsInParent().getMinY() + size),
-                    Color.BLACK);
+        circle.setFill(Color.rgb((int)(MAX_COLOR_VALUE - cloudColor),
+                (int)(MAX_COLOR_VALUE - cloudColor),
+                (int)(MAX_COLOR_VALUE - cloudColor)));
+        cloudLabel = new GameText(String.format("%.0f%%", percentage),
+                    new Point2D(
+                        circle.getBoundsInParent().getCenterX() - 
+                                (GameText.FONT_SIZE / 2),
+                        circle.getBoundsInParent().getCenterY() + 
+                                (GameText.FONT_SIZE / 2)),
+                        Color.BLACK);
         getChildren().addAll(circle, cloudLabel);
     }
 
     public void seed() {
-        System.out.println("seeding...");
-        if (cloudColor > 155) {
-            cloudColor--;
-            circle.setFill(Color.rgb(cloudColor,cloudColor,cloudColor));
-            percentage = cloudColor / MAX_COLOR_VALUE;
+        if (cloudColor < (MAX_COLOR_VALUE -MIN_COLOR_VALUE)) {
+            cloudColor+=PERCENT_ADDER;
+            circle.setFill(Color.rgb((int)(MAX_COLOR_VALUE - cloudColor),
+                    (int)(MAX_COLOR_VALUE - cloudColor),
+                    (int)(MAX_COLOR_VALUE - cloudColor)));
+            percentage = cloudColor / (MAX_COLOR_VALUE - MIN_COLOR_VALUE);
             percentage *= 100;
             updateLabel(percentage);
-        }
-        
+        }   
     }
-    
+
     private void updateLabel(double val) {
-        cloudLabel.updateLabel(String.format("%.2f", val));
+        cloudLabel.updateLabel(String.format("%.0f%%", val));
     }
 }
 class Helipad extends GameObject {
@@ -331,7 +338,6 @@ class Game extends Pane {
                 }
                 if (heli.getBoundsInParent().
                     intersects(pond.getBoundsInParent())) {
-                        
                 }
 
                 if (heli.getBoundsInParent().
@@ -377,7 +383,6 @@ class Game extends Pane {
     }
 
     public void createPond() {
-        // rand.nextInt((max - min) + 1) + min;
         pond = new Pond(new Point2D(
             r.nextInt(((GAME_WIDTH - POND_SIZE) - 
             POND_SIZE) + 1) +
