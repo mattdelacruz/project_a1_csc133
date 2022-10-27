@@ -128,20 +128,41 @@ class Pond extends GameObject {
 }
 class Cloud extends GameObject {
 
-    private final Color CLOUD_COLOR = Color.rgb(255, 255, 255);
+    public static final int MAX_COLOR_VALUE = 255;
 
     Circle circle;
     GameText cloudLabel;
+    int cloudColor;
+    double percentage;
 
     Cloud(Point2D s, double size) {
         circle = new Circle(s.getX(), s.getY(), size);
-        circle.setFill(CLOUD_COLOR);
-        cloudLabel = new GameText(String.format("%.2f", size),
+        cloudColor = 255;
+        percentage = cloudColor / MAX_COLOR_VALUE;
+        percentage *= 100;
+        circle.setFill(Color.rgb(cloudColor, cloudColor, cloudColor));
+        cloudLabel = new GameText(String.format("%.2f ", percentage),
                 new Point2D(
                         circle.getBoundsInParent().getMinX() + size - GameText.FONT_SIZE,
                         circle.getBoundsInParent().getMinY() + size),
                     Color.BLACK);
         getChildren().addAll(circle, cloudLabel);
+    }
+
+    public void seed() {
+        System.out.println("seeding...");
+        if (cloudColor > 155) {
+            cloudColor--;
+            circle.setFill(Color.rgb(cloudColor,cloudColor,cloudColor));
+            percentage = cloudColor / MAX_COLOR_VALUE;
+            percentage *= 100;
+            updateLabel(percentage);
+        }
+        
+    }
+    
+    private void updateLabel(double val) {
+        cloudLabel.updateLabel(String.format("%.2f", val));
     }
 }
 class Helipad extends GameObject {
@@ -220,7 +241,7 @@ class Helicopter extends GameObject {
         fuelLabel.updateLabel(String.format("F: %d", f));
     }
 
-    public void Left() {
+    public void left() {
         helicopter.getTransforms()
                 .add(new Rotate(
                         ROTATION_ANGLE,
@@ -228,7 +249,7 @@ class Helicopter extends GameObject {
                         circle.getBoundsInParent().getCenterY()));
     }
 
-    public void Right() {
+    public void right() {
         helicopter.getTransforms()
                 .add(new Rotate(
                         -ROTATION_ANGLE,
@@ -310,14 +331,12 @@ class Game extends Pane {
                 }
                 if (heli.getBoundsInParent().
                     intersects(pond.getBoundsInParent())) {
-                        i++;
-                        System.out.println("I am over the pond " + i + " times");
+                        
                 }
 
                 if (heli.getBoundsInParent().
                     intersects(cloud.getBoundsInParent())) {
-                        j++;
-                        System.out.println("I am over the cloud " + j + " times");
+                        
                 }
                 heli.updateBoundingBox();
             }
@@ -378,16 +397,15 @@ class Game extends Pane {
             ((int)(helipad.getBoundsInParent().getMaxY()) + CLOUD_SIZE) + 1)) +
             (int)(helipad.getBoundsInParent().getMaxY() + CLOUD_SIZE)),
             CLOUD_SIZE);
-
     }
 
     public void handleMovement(KeyEvent e) {
         if (e.getCode() == KeyCode.LEFT) {
-            heli.Left();
+            heli.left();
         }
 
         if (e.getCode() == KeyCode.RIGHT) {
-            heli.Right();
+            heli.right();
         }
 
         if (e.getCode() == KeyCode.UP) {
@@ -396,6 +414,13 @@ class Game extends Pane {
 
         if (e.getCode() == KeyCode.DOWN) {
             heli.decreaseSpeed();
+        }
+    }
+
+    public void handleSeeding() {
+        if (heli.getBoundsInParent().
+            intersects(cloud.getBoundsInParent())) {
+                cloud.seed();   
         }
     }
 
@@ -445,6 +470,9 @@ public class GameApp extends Application {
             }
             if (e.getCode() == KeyCode.R) {
                 root.handleReset();
+            }
+            if (e.getCode() == KeyCode.SPACE) {
+                root.handleSeeding();
             }
         });
         stage.setResizable(false);
