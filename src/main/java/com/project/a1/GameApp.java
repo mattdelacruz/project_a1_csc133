@@ -31,40 +31,43 @@ abstract class GameObject extends Group {
             getBoundsInParent().getWidth(),
             getBoundsInParent().getHeight());
 
-    void showBoundingBox() {
+    public void showBoundingBox() {
         getChildren().remove(bound);
         bound = new Rectangle(getBoundsInParent().getMinX(),
                 getBoundsInParent().getMinY(),
                 getBoundsInParent().getWidth(),
                 getBoundsInParent().getHeight());
+        checkIfBoundOn();
+    }
 
-        bound.setFill(Color.TRANSPARENT);
-        bound.setStroke(Color.WHITE);
-
-        if (!isBoundOn) {
+    public void updateBoundingBox() {
+        getChildren().remove(bound);
+        bound = new Rectangle(getBoundsInParent().getMinX(),
+                getBoundsInParent().getMinY(),
+                getBoundsInParent().getWidth(),
+                getBoundsInParent().getHeight());
+        if (isBoundOn) {
             getChildren().add(bound);
-            isBoundOn = true;
-
-        } else if (isBoundOn) {
-            isBoundOn = false;
+            bound.setFill(Color.TRANSPARENT);
+            bound.setStroke(Color.WHITE);
         }
     }
 
-    void updateBoundingBox() {
-        getChildren().remove(bound);
-        bound = new Rectangle(getBoundsInParent().getMinX(),
-                getBoundsInParent().getMinY(),
-                getBoundsInParent().getWidth(),
-                getBoundsInParent().getHeight());
+    private void checkIfBoundOn() { 
         bound.setFill(Color.TRANSPARENT);
-        bound.setStroke(Color.WHITE);
-        if (isBoundOn)
+        if (!isBoundOn) {
             getChildren().add(bound);
+            bound.setStroke(Color.WHITE);
+            isBoundOn = true;
 
+        } else if (isBoundOn) {
+            getChildren().remove(bound);
+            isBoundOn = false;
+        }
     }
 }
 
-interface Update {
+interface Updateable {
     public void update();
 
 }
@@ -84,24 +87,23 @@ class GameText extends GameObject {
         getTransforms().addAll(new Translate(loc.getX(), 
             loc.getY()), SCALE);
         generateLabel(s, c);
+        getChildren().add(l);
     }
 
     private void generateLabel(String s, Color c) {
         l = new Label(s);
         l.setFont(Font.font("Arial", FONT_WEIGHT, FONT_SIZE));
         l.setTextFill(c);
-
-        getChildren().add(l);
     }
 
     public void moveLabel(Point2D pos) {
         getTransforms().add(new Translate(pos.getX(), pos.getY()));
-
     }
 
     public void updateLabel(String s) {
         getChildren().remove(l);
         generateLabel(s, color);
+        getChildren().add(l);
     }
 }
 
@@ -116,7 +118,7 @@ class Pond extends GameObject {
     Pond(Point2D s, double size) {
         circle = new Circle(s.getX(), s.getY(), size);
         circle.setFill(POND_COLOR);
-        pondLabel = new GameText(String.format("%f", size),
+        pondLabel = new GameText(String.format("%.2f", size),
                 new Point2D(
                         circle.getBoundsInParent().getMinX() + size - GameText.FONT_SIZE,
                         circle.getBoundsInParent().getMinY() + size),
@@ -134,7 +136,7 @@ class Cloud extends GameObject {
     Cloud(Point2D s, double size) {
         circle = new Circle(s.getX(), s.getY(), size);
         circle.setFill(CLOUD_COLOR);
-        cloudLabel = new GameText(String.format("%f", size),
+        cloudLabel = new GameText(String.format("%.2f", size),
                 new Point2D(
                         circle.getBoundsInParent().getMinX() + size - GameText.FONT_SIZE,
                         circle.getBoundsInParent().getMinY() + size),
@@ -188,7 +190,6 @@ class Helicopter extends GameObject {
 
     Helicopter(Point2D s, Color c, double r, int startFuel) {
         helicopter = new Group();
-        label = new Group();
         circle = new Circle(s.getX(), s.getY(), r, c);
         line = new Line(circle.getCenterX(),
                 circle.getCenterY(),
@@ -210,16 +211,13 @@ class Helicopter extends GameObject {
 
     public void consumeFuel() { 
         if (fuelValue > 0)
-            updateFuel(fuelValue -= FUEL_CONSUMPTION); 
-        
+            updateFuel(fuelValue -= FUEL_CONSUMPTION);
     }
 
     public boolean isIgnitionOn() { return engineStart; }
 
     private void updateFuel(int f) {
-        helicopter.getChildren().remove(fuelLabel);
         fuelLabel.updateLabel(String.format("F: %d", f));
-        helicopter.getChildren().add(fuelLabel);
     }
 
     public void Left() {
@@ -279,8 +277,8 @@ class Game extends Pane {
     private static final Color HELI_COLOR = Color.YELLOW;
     private static final int START_FUEL = 250000;
 
-    private static final int POND_SIZE = GAME_WIDTH / 15;
-    private static final int CLOUD_SIZE = GAME_WIDTH / 15;
+    private static final int POND_SIZE = GAME_WIDTH / 5;
+    private static final int CLOUD_SIZE = GAME_WIDTH / 10;
 
     private static final int HELIPAD_SIZE = GAME_WIDTH / 5;
     private static final Color HELIPAD_COLOR = Color.GRAY;
