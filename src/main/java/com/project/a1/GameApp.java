@@ -144,11 +144,9 @@ class Pond extends GameObject implements Updateable {
                             (GameText.FONT_SIZE / 2)),
                 Color.WHITE);
         getChildren().addAll(circle, pondLabel);
-
     }
 
     public double getSize() { return (currentSize / maxSize) * 100; }
-
 }
 class Cloud extends GameObject implements Updateable{
     private static final double MAX_COLOR_VALUE = 255;
@@ -221,7 +219,6 @@ class Helipad extends GameObject {
         circle = new Circle(rect.getX() + rect.getWidth() / 2,
                 rect.getY() + rect.getHeight() / 2,
                 (rect.getWidth() / 2) - GAP);
-
         rect.setFill(Color.TRANSPARENT);
         rect.setStroke(c);
         circle.setFill(Color.TRANSPARENT);
@@ -240,7 +237,7 @@ class Helicopter extends GameObject {
     private static final int FUEL_CONSUMPTION = 1;
     private static final int MAX_SPEED = 10;
     private static final int MIN_SPEED = -2;
-    private static final int LABEL_GAP = 10;
+    private static final int LABEL_GAP = 15;
     private static final double ACCELERATION = 0.1;
 
     Circle circle;
@@ -258,7 +255,6 @@ class Helicopter extends GameObject {
                 circle.getCenterY(),
                 circle.getCenterX(),
                 circle.getCenterY() + circle.getRadius() + HEADING_LENGTH);
-        
         fuelValue = startFuel;
         fuelLabel = new GameText(String.format("F: %d",fuelValue), 
                 new Point2D(
@@ -328,27 +324,21 @@ class Helicopter extends GameObject {
     }
 
     public double getSpeed() { return speed; }
-
     public int getFuel() { return fuelValue; }
 }
 
 class Game extends Pane {
     public static final int GAME_WIDTH = 400;
     public static final int GAME_HEIGHT = 800;
-
     private static final int HELI_RADIUS = GAME_WIDTH / 30;
-    private static final Color HELI_COLOR = Color.YELLOW;
     private static final int START_FUEL = 250000;
-
     private static final int POND_SIZE = GAME_WIDTH / 3;
     private static final int CLOUD_SIZE = GAME_WIDTH / 10;
-
     private static final int HELIPAD_SIZE = GAME_WIDTH / 5;
-    private static final Color HELIPAD_COLOR = Color.GRAY;
-
-    private static final Scale SCALE = new Scale(1, -1);
-
     private static final double PERCENT_THRESHOLD = 30.0;
+    private static final Color HELIPAD_COLOR = Color.GRAY;
+    private static final Color HELI_COLOR = Color.YELLOW;
+    private static final Scale SCALE = new Scale(1, -1);
 
     Random r = new Random();
     Helicopter heli;
@@ -367,26 +357,27 @@ class Game extends Pane {
 
             @Override
             public void handle(long now) {
-
                 checkIfWon();
+                checkIfLose();
 
                 heli.moveHeli();
-                if (heli.isIgnitionOn()) {
-                    heli.consumeFuel();
-                }
+                if (heli.isIgnitionOn()) { heli.consumeFuel(); }
 
                 heli.updateBoundingBox();
                 pond.updateBoundingBox();
 
-                if (now % 2000 == 0) {
-                    cloud.decrease();
-                    System.out.println(heli.getSpeed());
-                }
+                if (now % 2000 == 0) { cloud.decrease(); }
 
                 if (now % 600 == 0) {
-                    if (cloud.getPercentage() > PERCENT_THRESHOLD) {
+                    if (cloud.getPercentage() > PERCENT_THRESHOLD)
                         pond.update();
-                    }
+                }
+            }
+
+            private void checkIfLose() {
+                if (heli.getFuel() == 0) {
+                    System.out.println("YOU LOST YOU LOSER");
+                    handleReset();
                 }
             }
 
@@ -394,7 +385,7 @@ class Game extends Pane {
                 if (heli.getFuel() > 0 && 
                     heli.getBoundsInParent().
                         intersects(helipad.getBoundsInParent()) &&
-                    (int) heli.getSpeed() == 0 && 
+                    (int)heli.getSpeed() == 0 && 
                     pond.getSize() >= 100.0) {
                         System.out.println("you won!");
                         handleReset();
@@ -459,21 +450,10 @@ class Game extends Pane {
     }
 
     public void handleMovement(KeyEvent e) {
-        if (e.getCode() == KeyCode.LEFT) {
-            heli.left();
-        }
-
-        if (e.getCode() == KeyCode.RIGHT) {
-            heli.right();
-        }
-
-        if (e.getCode() == KeyCode.UP) {
-            heli.increaseSpeed();
-        }
-
-        if (e.getCode() == KeyCode.DOWN) {
-            heli.decreaseSpeed();
-        }
+        if (e.getCode() == KeyCode.LEFT) { heli.left(); }
+        if (e.getCode() == KeyCode.RIGHT) { heli.right(); }
+        if (e.getCode() == KeyCode.UP) { heli.increaseSpeed(); }
+        if (e.getCode() == KeyCode.DOWN) { heli.decreaseSpeed(); }
     }
 
     public void handleSeeding() {
@@ -483,9 +463,7 @@ class Game extends Pane {
         }
     }
 
-    public void handleIgnition() {
-        heli.engineStart();
-    }
+    public void handleIgnition() { heli.engineStart(); }
 
     public void handleBoundBoxes() {
         heli.showBoundingBox();
@@ -515,24 +493,15 @@ public class GameApp extends Application {
 
         stage.setScene(scene);
         scene.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.LEFT ||
+            if (    e.getCode() == KeyCode.LEFT ||
                     e.getCode() == KeyCode.RIGHT ||
                     e.getCode() == KeyCode.UP ||
-                    e.getCode() == KeyCode.DOWN) {
-                root.handleMovement(e);
-            }
-            if (e.getCode() == KeyCode.I) {
-                root.handleIgnition();
-            }
-            if (e.getCode() == KeyCode.B) {
-                root.handleBoundBoxes();
-            }
-            if (e.getCode() == KeyCode.R) {
-                root.handleReset();
-            }
-            if (e.getCode() == KeyCode.SPACE) {
-                root.handleSeeding();
-            }
+                    e.getCode() == KeyCode.DOWN) { root.handleMovement(e); }
+
+            if (e.getCode() == KeyCode.I) { root.handleIgnition(); }
+            if (e.getCode() == KeyCode.B) { root.handleBoundBoxes(); }
+            if (e.getCode() == KeyCode.R) { root.handleReset(); }
+            if (e.getCode() == KeyCode.SPACE) { root.handleSeeding(); }
         });
         stage.setResizable(false);
         stage.show();
