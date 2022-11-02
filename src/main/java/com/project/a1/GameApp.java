@@ -2,10 +2,16 @@ package com.project.a1;
 
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
@@ -21,11 +27,16 @@ import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 abstract class GameObject extends Group {
+    private static Color BOUND_FILL = Color.TRANSPARENT;
+    private static Color BOUND_STROKE = Color.WHITE;
+    
     boolean isBoundOn = false;
+
     Rectangle bound = new Rectangle(getBoundsInParent().getMinX(),
             getBoundsInParent().getMinY(),
             getBoundsInParent().getWidth(),
@@ -40,9 +51,13 @@ abstract class GameObject extends Group {
         updateBound(); 
         if (isBoundOn) {
             getChildren().add(bound);
-            bound.setFill(Color.TRANSPARENT);
-            bound.setStroke(Color.WHITE);
+            bound.setFill(BOUND_FILL);
+            bound.setStroke(BOUND_STROKE);
         }
+    }
+
+    public GameText createLabel(String s, Point2D p, Color c) {
+        return new GameText(s,p,c);
     }
 
     private void updateBound() {
@@ -54,10 +69,10 @@ abstract class GameObject extends Group {
     }
 
     private void checkIfBoundOn() { 
-        bound.setFill(Color.TRANSPARENT);
+        bound.setFill(BOUND_FILL);
         if (!isBoundOn) {
             getChildren().add(bound);
-            bound.setStroke(Color.WHITE);
+            bound.setStroke(BOUND_STROKE);
             isBoundOn = true;
 
         } else if (isBoundOn) {
@@ -69,9 +84,11 @@ abstract class GameObject extends Group {
 interface Updateable {
     public void update();
 }
+
 class GameText extends GameObject {
     private static final Scale SCALE = new Scale(1, -1);
     private static final FontWeight FONT_WEIGHT = FontWeight.NORMAL;
+    private static final String FONT_FAMILY = "Arial";
     public static final int FONT_SIZE = 15;
 
     Label l = new Label();
@@ -89,7 +106,7 @@ class GameText extends GameObject {
 
     private void generateLabel(String s, Color c) {
         l = new Label(s);
-        l.setFont(Font.font("Arial", FONT_WEIGHT, FONT_SIZE));
+        l.setFont(Font.font(FONT_FAMILY, FONT_WEIGHT, FONT_SIZE));
         l.setTextFill(c);
     }
 
@@ -102,58 +119,66 @@ class GameText extends GameObject {
         generateLabel(s, color);
         getChildren().add(l);
     }
-}
 
+}
+//radius = sqrt(AREA / pi)
 class Pond extends GameObject implements Updateable {
     private static final Color POND_COLOR = Color.BLUE;
+    private static final Color FONT_COLOR = Color.WHITE;
     private static final double PERCENT_VALUE = 0.01;
+    private static final String LABEL_FORMAT = "%.0f%%";
 
     Circle circle;
     GameText pondLabel;
     Random r = new Random();
     Point2D pos;
-    double maxSize, currentSize, percentAdder;
+    double currentRadius, maxRadius, percentAdder, currentArea, maxArea;
+    
 
-    Pond(Point2D s, double size) {
-        double randomNum = ThreadLocalRandom.current().nextDouble(1, size + 1);
+    Pond(Point2D s, double radius) {
+        double randomNum = ThreadLocalRandom.current().nextDouble(1, radius + 1);
         pos = s;
-        maxSize = size;
-        currentSize = size - randomNum;
-        percentAdder = (maxSize - currentSize) * PERCENT_VALUE;
+        maxRadius = radius;
+        currentRadius = radius - randomNum;
+        currentArea = Math.PI * Math.pow(currentRadius, 2);
+        maxArea = Math.PI * Math.pow(maxRadius, 2);
+        percentAdder =  (maxArea - currentArea) * PERCENT_VALUE;
         createPond();
     }
 
     @Override
     public void update() {
-        if (currentSize < maxSize) {
+        if (currentArea < maxArea) {
             getChildren().clear();
-            currentSize += percentAdder;
+            currentArea += percentAdder;
             createPond();
         }
     }
 
     private void createPond() {
-        circle = new Circle(pos.getX(), pos.getY(), currentSize);
+        circle = new Circle(pos.getX(), pos.getY(), Math.sqrt(currentArea / Math.PI));
         circle.setFill(POND_COLOR);
-        pondLabel = new GameText(String.format("%.0f%%",
-                (currentSize / maxSize) * 100),
+        pondLabel = createLabel(String.format(LABEL_FORMAT,
+                getSize()),
                 new Point2D(
                         circle.getBoundsInParent().getCenterX() - 
                             (GameText.FONT_SIZE / 2),
                         circle.getBoundsInParent().getCenterY() +
                             (GameText.FONT_SIZE / 2)),
-                Color.WHITE);
+                FONT_COLOR);
         getChildren().addAll(circle, pondLabel);
     }
 
-    public double getSize() { return (currentSize / maxSize) * 100; }
+    public double getSize() { return (currentArea / maxArea) * 100; }
 }
-class Cloud extends GameObject implements Updateable{
+class Cloud extends GameObject implements Updateable {
     private static final double MAX_COLOR_VALUE = 255;
     private static final double MIN_COLOR_VALUE = 155;
     private static final double PERCENT_VALUE = 0.01;
     private static final double PERCENT_ADDER = (MAX_COLOR_VALUE -
             MIN_COLOR_VALUE) * PERCENT_VALUE;
+    private static final String LABEL_FORMAT = "%.0f%%";
+    private static final Color FONT_COLOR = Color.BLACK;
 
     Circle circle;
     GameText cloudLabel;
@@ -164,16 +189,17 @@ class Cloud extends GameObject implements Updateable{
         cloudColorValue = 0;
         percentage = cloudColorValue / MAX_COLOR_VALUE;
         percentage *= 100;
-        circle.setFill(Color.rgb((int)(MAX_COLOR_VALUE - cloudColorValue),
+        circle.setFill(Color.rgb(
+                (int)(MAX_COLOR_VALUE - cloudColorValue),
                 (int)(MAX_COLOR_VALUE - cloudColorValue),
                 (int)(MAX_COLOR_VALUE - cloudColorValue)));
-        cloudLabel = new GameText(String.format("%.0f%%", percentage),
+        cloudLabel = createLabel(String.format(LABEL_FORMAT, percentage),
                     new Point2D(
                         circle.getBoundsInParent().getCenterX() - 
                                 (GameText.FONT_SIZE / 2),
                         circle.getBoundsInParent().getCenterY() + 
                                 (GameText.FONT_SIZE / 2)),
-                        Color.BLACK);
+                        FONT_COLOR);
         getChildren().addAll(circle, cloudLabel);
     }
 
@@ -202,7 +228,7 @@ class Cloud extends GameObject implements Updateable{
     }
 
     private void updateLabel(double val) {
-        cloudLabel.updateLabel(String.format("%.0f%%", val));
+        cloudLabel.updateLabel(String.format(LABEL_FORMAT, val));
     }
 
     public double getPercentage() { return percentage; }
@@ -210,6 +236,7 @@ class Cloud extends GameObject implements Updateable{
 class Helipad extends GameObject {
 
     private static final int GAP = 5;
+    private static final Color HELIPAD_FILL = Color.TRANSPARENT;
 
     Rectangle rect;
     Circle circle;
@@ -219,9 +246,9 @@ class Helipad extends GameObject {
         circle = new Circle(rect.getX() + rect.getWidth() / 2,
                 rect.getY() + rect.getHeight() / 2,
                 (rect.getWidth() / 2) - GAP);
-        rect.setFill(Color.TRANSPARENT);
+        rect.setFill(HELIPAD_FILL);
         rect.setStroke(c);
-        circle.setFill(Color.TRANSPARENT);
+        circle.setFill(HELIPAD_FILL);
         circle.setStroke(c);
         getChildren().addAll(rect, circle);
     }
@@ -231,20 +258,20 @@ class Helipad extends GameObject {
     }
 }
 class Helicopter extends GameObject {
-
     private static final int ROTATION_ANGLE = 15;
-    private static final int HEADING_LENGTH = 30;
+    private static final int HEADING_LENGTH = 50;
     private static final int FUEL_CONSUMPTION = 1;
     private static final int MAX_SPEED = 10;
     private static final int MIN_SPEED = -2;
     private static final int LABEL_GAP = 15;
     private static final double ACCELERATION = 0.1;
+    private static final String LABEL_FORMAT = "F: %d";
 
     Circle circle;
     Line line;
     GameText fuelLabel;
     Group helicopter, label;
-    boolean engineStart = false;
+    boolean engineOn = false;
     double speed = 0;
     int fuelValue = 0;
 
@@ -256,7 +283,7 @@ class Helicopter extends GameObject {
                 circle.getCenterX(),
                 circle.getCenterY() + circle.getRadius() + HEADING_LENGTH);
         fuelValue = startFuel;
-        fuelLabel = new GameText(String.format("F: %d",fuelValue), 
+        fuelLabel = createLabel(String.format(LABEL_FORMAT, fuelValue), 
                 new Point2D(
                 circle.getBoundsInParent().getCenterX() -
                         LABEL_GAP,
@@ -273,10 +300,10 @@ class Helicopter extends GameObject {
             updateFuel(fuelValue -= FUEL_CONSUMPTION);
     }
 
-    public boolean isIgnitionOn() { return engineStart; }
+    public boolean isIgnitionOn() { return engineOn; }
 
     private void updateFuel(int f) {
-        fuelLabel.updateLabel(String.format("F: %d", f));
+        fuelLabel.updateLabel(String.format(LABEL_FORMAT, f));
     }
 
     public void left() {
@@ -296,28 +323,28 @@ class Helicopter extends GameObject {
     }
 
     public void moveHeli() {
-        if (engineStart)
+        if (engineOn)
             helicopter.getTransforms().add(new Translate(0, speed));
         else
             return;
     }
 
     public void engineStart() {
-        if (!engineStart)
-            engineStart = true;
+        if (!engineOn)
+            engineOn = true;
         else
-            engineStart = false;
+            engineOn = false;
     }
 
     public void increaseSpeed() {
-        if (engineStart && speed <= MAX_SPEED)
+        if (engineOn && speed <= MAX_SPEED)
             speed += ACCELERATION;
         else
             return;
     }
 
     public void decreaseSpeed() {
-        if (engineStart && speed >= MIN_SPEED) 
+        if (engineOn && speed >= MIN_SPEED) 
             speed -= ACCELERATION;
         else
             return;
@@ -327,7 +354,7 @@ class Helicopter extends GameObject {
     public int getFuel() { return fuelValue; }
 }
 
-class Game extends Pane {
+class Game extends Pane implements Updateable{
     public static final int GAME_WIDTH = 400;
     public static final int GAME_HEIGHT = 800;
     private static final int HELI_RADIUS = GAME_WIDTH / 30;
@@ -345,26 +372,31 @@ class Game extends Pane {
     Helipad helipad;
     Pond pond;
     Cloud cloud;
+    Alert alert = new Alert(AlertType.CONFIRMATION);
+
+
 
     public Game() {
-        createGameObjects();
-        setUpUI();
+        init();
         startAnimation();
     }
 
-    public void startAnimation() {
-        AnimationTimer loop = new AnimationTimer() {
+    private void getEndResult() {
+        Platform.runLater(() -> {
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                handleReset();
+            }
+        });        
+    }
 
+    private void startAnimation() {
+        AnimationTimer loop = new AnimationTimer() {
             @Override
             public void handle(long now) {
-                checkIfWon();
-                checkIfLose();
-
-                heli.moveHeli();
+                update();
+                
                 if (heli.isIgnitionOn()) { heli.consumeFuel(); }
-
-                heli.updateBoundingBox();
-                pond.updateBoundingBox();
 
                 if (now % 2000 == 0) { cloud.decrease(); }
 
@@ -372,44 +404,63 @@ class Game extends Pane {
                     if (cloud.getPercentage() > PERCENT_THRESHOLD)
                         pond.update();
                 }
-            }
 
-            private void checkIfLose() {
-                if (heli.getFuel() == 0) {
-                    System.out.println("YOU LOST YOU LOSER");
-                    handleReset();
-                }
-            }
-
-            private void checkIfWon() {
-                if (heli.getFuel() > 0 && 
-                    heli.getBoundsInParent().
-                        intersects(helipad.getBoundsInParent()) &&
-                    (int)heli.getSpeed() == 0 && 
-                    pond.getSize() >= 100.0) {
-                        System.out.println("you won!");
-                        handleReset();
+                if (checkIfLose() || checkIfWon()) {
+                    stop();
+                    getEndResult();
                 }
             }
         };
         loop.start();
     }
+
+
+    private void init() {
+        createGameObjects();
+        setUpUI();
+    }
+
+    private boolean checkIfLose() {
+        if (heli.getFuel() == 0) {
+            createDialogBox("YOU LOST YOU LOSER");
+            return true;
+        }
+        return false;
+    }
+
+    private boolean checkIfWon() {
+        if (heli.getFuel() > 0 && 
+            heli.getBoundsInParent().
+                intersects(helipad.getBoundsInParent()) &&
+            (int)heli.getSpeed() == 0 && 
+            pond.getSize() >= 100.0) {
+                createDialogBox("YOU WON");
+                return true;
+        }
+        return false;
+    }
+
+    private void createDialogBox(String s) {
+        alert = new Alert(AlertType.CONFIRMATION);
+        alert.setTitle(s);
+        alert.setContentText(s);               
+    }
     
-    public void createGameObjects() {
+    private void createGameObjects() {
         createHelipad();
         createHelicopter();
         createPond();
         createCloud();
     }
 
-    public void setUpUI() {
+    private void setUpUI() {
         SCALE.setPivotY(GAME_HEIGHT / 2);
         setStyle("-fx-background-color: black;");
         getTransforms().add(SCALE);
         getChildren().addAll(helipad, pond, cloud, heli);
     }
 
-    public void createHelipad() {
+    private void createHelipad() {
         helipad = new Helipad(new Point2D(
             GAME_WIDTH / 2 - HELIPAD_SIZE / 2,
             GAME_HEIGHT / 10),
@@ -418,7 +469,7 @@ class Game extends Pane {
             HELIPAD_SIZE);
     }
 
-    public void createHelicopter() {
+    private void createHelicopter() {
         heli = new Helicopter(new Point2D(
             helipad.getCenter().getX(),
             helipad.getCenter().getY()),
@@ -427,7 +478,7 @@ class Game extends Pane {
             START_FUEL);
     }
 
-    public void createPond() {
+    private void createPond() {
         pond = new Pond(new Point2D(
             r.nextInt(((GAME_WIDTH - POND_SIZE) - 
             POND_SIZE) + 1) +
@@ -438,7 +489,7 @@ class Game extends Pane {
             POND_SIZE);
     }
 
-    public void createCloud() {
+    private void createCloud() {
         cloud = new Cloud(new Point2D(
             r.nextInt(((GAME_WIDTH - CLOUD_SIZE) -
             CLOUD_SIZE) + 1) +
@@ -475,10 +526,16 @@ class Game extends Pane {
     public void handleReset() {
         getChildren().clear();
         getTransforms().clear();
-        createGameObjects();
-        setUpUI();
+        init();
+        startAnimation();
     }
 
+    @Override
+    public void update() {
+        heli.moveHeli();
+        heli.updateBoundingBox();
+        pond.updateBoundingBox();   
+    }
 }
 
 public class GameApp extends Application {
