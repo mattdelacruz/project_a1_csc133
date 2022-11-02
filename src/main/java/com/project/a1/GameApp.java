@@ -293,7 +293,7 @@ class Helicopter extends GameObject {
         getChildren().add(helicopter);
     }
 
-    public void consumeFuel() { 
+    public void consumeFuel() {
         if (fuelValue > 0)
             updateFuel(fuelValue -= FUEL_CONSUMPTION);
     }
@@ -417,6 +417,7 @@ class Game extends Pane implements Updateable{
             Optional<ButtonType> result = alert.showAndWait();
             if (result.isPresent() && result.get() == Yes) {
                 handleReset();
+                startAnimation();
             }
             else if (result.isPresent() && result.get() == No) {
                 Platform.exit();
@@ -533,7 +534,6 @@ class Game extends Pane implements Updateable{
         getChildren().clear();
         getTransforms().clear();
         init();
-        startAnimation();
     }
 
     @Override
