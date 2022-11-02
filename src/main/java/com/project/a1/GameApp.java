@@ -298,11 +298,11 @@ class Helicopter extends GameObject {
             updateFuel(fuelValue -= FUEL_CONSUMPTION);
     }
 
+    public boolean isIgnitionOn() { return engineOn; }
+
     private void updateFuel(int f) {
         fuelLabel.updateLabel(String.format(LABEL_FORMAT, f));
     }
-
-    public boolean isIgnitionOn() { return engineOn; }
 
     public void left() {
         helicopter.getTransforms()
@@ -369,7 +369,6 @@ class Game extends Pane implements Updateable{
     private static final String LOSE_TEXT = "You have lost! Play again?";
     private static final String WIN_TEXT = "You have won! Play again?";
     
-
     Random r = new Random();
     Helicopter heli;
     Helipad helipad;
