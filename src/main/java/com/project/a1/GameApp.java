@@ -306,13 +306,7 @@ class Helicopter extends GameObject {
             updateFuel(fuelValue -= FUEL_CONSUMPTION);
     }
 
-<<<<<<< HEAD
     public boolean isIgnitionOn() { return engineOn; }
-=======
-    public boolean isIgnitionOn() {
-        return engineOn;
-    }
->>>>>>> 761d217a9c129fa058912493ea49d397bd4f20db
 
     private void updateFuel(int f) {
         fuelLabel.updateLabel(String.format(LABEL_FORMAT, f));
@@ -549,12 +543,9 @@ class Game extends Pane implements Updateable {
         }
     }
 
-<<<<<<< HEAD
-=======
     public void handleIgnition() {
         heli.engineStart();
     }
->>>>>>> 761d217a9c129fa058912493ea49d397bd4f20db
 
     public void handleBoundBoxes() {
         heli.showBoundingBox();
