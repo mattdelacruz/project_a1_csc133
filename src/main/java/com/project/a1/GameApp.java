@@ -130,7 +130,6 @@ class Pond extends GameObject implements Updateable {
     Point2D pos;
     double currentRadius, maxRadius, percentAdder, currentArea, maxArea;
     
-
     Pond(Point2D s, double radius) {
         double randomNum = ThreadLocalRandom.current().
                 nextDouble(1, radius + 1);
@@ -232,7 +231,6 @@ class Cloud extends GameObject implements Updateable {
     public double getPercentage() { return percentage; }
 }
 class Helipad extends GameObject {
-
     private static final int GAP = 5;
     private static final Color HELIPAD_FILL = Color.TRANSPARENT;
 
@@ -497,14 +495,16 @@ class Game extends Pane implements Updateable{
     }
 
     private void createCloud() {
-        cloud = new Cloud(new Point2D(
-            r.nextInt(((GAME_WIDTH - CLOUD_SIZE) -
-            CLOUD_SIZE) + 1) +
-            CLOUD_SIZE,
-            r.nextInt(((GAME_HEIGHT - CLOUD_SIZE) -
-            ((int)(helipad.getBoundsInParent().getMaxY()) + CLOUD_SIZE) + 1)) +
-            (int)(helipad.getBoundsInParent().getMaxY() + CLOUD_SIZE)),
-            CLOUD_SIZE);
+        do {
+            double cloudX = ThreadLocalRandom.current().
+                    nextDouble(CLOUD_SIZE, GAME_WIDTH);
+            double cloudY = ThreadLocalRandom.current().nextDouble(
+                    (helipad.getBoundsInParent().getMaxY()) + CLOUD_SIZE,
+                    GAME_HEIGHT);
+            Point2D cloudPos = new Point2D(cloudX, cloudY);
+            cloud = new Cloud(cloudPos, CLOUD_SIZE);
+        }
+        while (cloud.getBoundsInParent().intersects(pond.getBoundsInParent()));
     }
 
     public void handleMovement(KeyEvent e) {
